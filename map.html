@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Simple Map</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <meta charset="utf-8">
+    <style>
+      #map {
+        height: 100vh;
+        width: 100%;
+      }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text">
+                <select name="" id="" v-model="opcion">
+                    <option :value="item.key" v-for="item in opciones">{{item.value}}</option>
+                </select>
+            </div>
+            <div class="col-md-8">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZZX-WbpPBZSwwtfyl0JdvXkXhry9OFUc&callback=vm.initMap" async defer></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+    <script>
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                opciones: [
+                    {key:1, value:"Opción 1"},
+                    {key:2, value:"Opción 2"},
+                    {key:3, value:"Opción 3"}
+                ],
+                opcion: "1",
+                map: ''
+            },
+            methods:{
+                initMap: function(){
+                    this.map = new google.maps.Map(document.getElementById('map'), {
+                        center: {lat: 21.0345662, lng: -25.6502091},
+                        zoom: 2,
+                        size:"500x400"
+                    });                    
+                },
+                getData: async function(){
+                    var res = await axios.get("https://bandsofthefuture.com/mapsservice.php").then(x=>x.data);
+                    console.log(res);
+                },                
+                distinct: function (elements) {
+                    var uniques = [];
+                    elements.forEach(x => {
+                        if (!uniques.includes(x))
+                            uniques.push(x);
+                    });
+                    return uniques;
+                },
+                getFieldValues: function(){
+
+                    
+                }
+            },
+            async mounted(){
+                await this.getData();
+            }
+        });
+    </script>
+
+</body>
+</html>
