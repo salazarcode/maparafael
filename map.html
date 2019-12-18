@@ -15,11 +15,39 @@
 <body>
     <div class="container" id="app">
         <div class="row">
-            <div class="col-md-4">
-                <input type="text">
-                <select name="" id="" v-model="opcion">
-                    <option :value="item.key" v-for="item in opciones">{{item.value}}</option>
-                </select>
+            <div class="col-md-4"><br>
+                
+
+                <label for="">Solution for:</label>
+                <ul>
+                    <li v-for="(item, index) in cats1">
+                        <input type="checkbox" name="cat1" id="cat1" :value="item" v-model="cat1" @change="filter">
+                        {{item}}
+                    </li>
+                </ul>
+
+                
+                <label for="" v-if="cat2_enabled">Sites:</label>
+                <ul v-if="cat2_enabled">
+                    <li v-for="(item, index) in cats2" >
+                        <input type="checkbox" name="cat2" id="cat2" :value="item" v-model="cat2" @change="filter">
+                        {{item}}
+                    </li>
+                </ul>
+                
+
+                <label for="" v-if="cat3_enabled">Technology:</label>
+                <ul v-if="cat3_enabled">
+                    <li v-for="(item, index) in cats3" >
+                        <input type="checkbox" name="cat3" id="cat3" :value="item" v-model="cat3" @change="filter">
+                        {{item}}
+                    </li>
+                </ul>
+
+                <hr>
+                <ul>
+                    <li v-for="(item, index) in filtrados">{{item.Categoria1}}/{{item.Categoria2}}/{{item.Categoria3}} - {{item.Latitude != "" ? item.Latitude + "," + item.Longitude : 'Punto Sin Coordenadas'}}</li>
+                </ul>
             </div>
             <div class="col-md-8">
                 <div id="map"></div>
@@ -41,7 +69,18 @@
                     {key:3, value:"Opción 3"}
                 ],
                 opcion: "1",
-                map: ''
+                map: '',
+                data: "",
+                filtrados: "",
+                cats1: [],
+                cats2: [],
+                cats3: [],
+                cat1: [],
+                cat2: [],
+                cat3: [],
+                cat2_enabled: false,
+                cat3_enabled: false,
+                markers: []
             },
             methods:{
                 initMap: function(){
@@ -52,8 +91,13 @@
                     });                    
                 },
                 getData: async function(){
-                    var res = await axios.get("https://bandsofthefuture.com/mapsservice.php").then(x=>x.data);
-                    console.log(res);
+                    this.data = await axios.get("https://survision.site/mapsservice.php").then(x=>x.data);
+
+                    this.data.forEach(x => {
+                        x.Categoria1 = x.Categoria1.toUpperCase();
+                        x.Categoria2= x.Categoria2.toUpperCase();
+                        x.Categoria3 = x.Categoria3.toUpperCase();
+                    });
                 },                
                 distinct: function (elements) {
                     var uniques = [];
@@ -63,13 +107,95 @@
                     });
                     return uniques;
                 },
-                getFieldValues: function(){
+                createMarker: function(lat, lon, desc){
+                    var marker = new google.maps.Marker({
+                        position: {
+                            lat: lat,
+                            lng: lon
+                        },
+                        map: this.map,
+                        title: desc
+                    });
+                    this.markers.push(marker);
+                },
+                addMarkers: function(){
+                    this.filtrados.filter(x => x.Latitude != "").forEach(x=>{
+                        this.createMarker(parseFloat(x.Latitude), parseFloat(x.Longitude), x.Categoria1 + '/' + x.Categoria2 + '/' + x.Categoria3);
+                    });
+                },
 
-                    
+                calcularFiltros: function(tipo){
+                    switch(tipo){
+                        default:
+                            this.cats1 = [];
+                            this.distinct(this.filtrados.map(x => x.Categoria1.toUpperCase())).map(x=>this.cats1.push(x));
+                            
+                            this.cats2 = [];
+                            this.distinct(this.filtrados.map(x => x.Categoria2.toUpperCase())).map(x=>this.cats2.push(x));
+                            
+                            this.cats3 =[];
+                            this.distinct(this.filtrados.map(x => x.Categoria3.toUpperCase())).map(x=>this.cats3.push(x));
+                            break;
+                        case "cats1":
+                            this.cats1 = [];
+                            this.distinct(this.filtrados.map(x => x.Categoria1.toUpperCase())).map(x=>this.cats1.push(x)); 
+                            break;  
+                        case "cats2":
+                            this.cats2 = [];
+                            this.distinct(this.filtrados.map(x => x.Categoria2.toUpperCase())).map(x=>this.cats2.push(x)); 
+                            break;  
+                        case "cats3":
+                            this.cats3 = [];
+                            this.distinct(this.filtrados.map(x => x.Categoria3.toUpperCase())).map(x=>this.cats3.push(x));   
+                            break;              
+
+                    }
+                },
+                clearMarkers: function(){
+                    this.markers.forEach(x=>x.setMap(null));
+                    this.markers = [];
+                },
+                filter: function(event){
+                    switch(event.target.id){
+                        case "cat1":
+                            this.filtrados = this.data.filter(x=>this.cat1.includes(x.Categoria1));
+                            this.calcularFiltros("cats2");                            
+                            this.cat2_enabled = true;                            
+                            this.cat3_enabled = false;
+                            break;
+
+
+                        case "cat2":
+                            if(this.cat2.length == 0)
+                            {
+                                this.filtrados = this.data.filter(x=>this.cat1.includes(x.Categoria1));                                        
+                            }
+                            else
+                            {                                
+                                this.filtrados = this.data.filter(x=>this.cat1.includes(x.Categoria1) && this.cat2.includes(x.Categoria2));
+                                this.cat3 = [];
+                            }
+                            this.calcularFiltros("cats3"); 
+                            this.cat3_enabled = true;  
+                            break;
+
+
+                        case "cat3":
+                            if(this.cat3.length == 0)
+                                this.filtrados = this.data.filter(x=>this.cat1.includes(x.Categoria1) && this.cat2.includes(x.Categoria2));
+                            else
+                                this.filtrados = this.data.filter(x=>this.cat1.includes(x.Categoria1) && this.cat2.includes(x.Categoria2) && this.cat3.includes(x.Categoria3));             
+                            break;
+                    }
+                    this.clearMarkers();
+                    this.addMarkers();
                 }
             },
             async mounted(){
                 await this.getData();
+                this.filtrados = this.data;
+                this.calcularFiltros();
+                this.addMarkers();
             }
         });
     </script>
